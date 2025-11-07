@@ -5,7 +5,7 @@ const { Server } = require('socket.io');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || '');
-const { Configuration, OpenAIApi } = require('openai');
+const OpenAI = require('openai');
 const { Pool } = require('pg');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
@@ -21,12 +21,12 @@ const PORT = process.env.PORT || 4000;
 app.use(cors());
 app.use(bodyParser.json());
 
-// Initialize OpenAI
-const openai = new OpenAIApi(
-  new Configuration({ apiKey: process.env.OPENAI_API_KEY })
-);
+// ✅ FIX: Use new OpenAI SDK initialization
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
-// AWS S3 setup (for uploads)
+// AWS S3 setup
 const s3 = new AWS.S3({
   accessKeyId: process.env.AWS_ACCESS_KEY_ID,
   secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
@@ -34,7 +34,7 @@ const s3 = new AWS.S3({
 });
 const upload = multer({ storage: multer.memoryStorage() });
 
-// Helper functions
+// Helpers
 function signToken(user) {
   return jwt.sign(
     { id: user.id, role: user.role },
@@ -109,12 +109,27 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// Default route
-app.get('/', (req, res) => {
-  res.send('✅ Smythe IQ backend is running successfully!');
+// Test OpenAI route
+app.post('/api/ai/chat', async (req, res) => {
+  try {
+    const { message } = req.body;
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [{ role: 'user', content: message }],
+    });
+    res.json({ reply: response.choices[0].message.content });
+  } catch (err) {
+    console.error('AI error:', err);
+    res.status(500).json({ error: 'AI service unavailable' });
+  }
 });
 
-// Socket.IO setup
+// Default route
+app.get('/', (req, res) => {
+  res.send('✅ Smythe IQ backend is running successfully with OpenAI v4 SDK!');
+});
+
+// Socket.IO
 io.on('connection', (socket) => {
   console.log('New client connected:', socket.id);
   socket.on('disconnect', () => console.log('Client disconnected:', socket.id));
