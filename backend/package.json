@@ -17,7 +17,7 @@
     "axios": "^1.4.0",
     "openai": "^4.8.0",
     "socket.io": "^4.7.2",
-    "multer": "^1.4.5",
+    "multer": "^1.4.5-lts.1",
     "aws-sdk": "^2.1360.0",
     "body-parser": "^1.20.2"
   },
